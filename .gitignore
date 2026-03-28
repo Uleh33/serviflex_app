@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Exclusion for large binary files generated during build
+/build/
+build/
+**/build/**
+*.apk
+*.aab
+*.so
