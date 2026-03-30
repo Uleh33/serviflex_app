@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'firebase_options.dart';
 
+// Especialidad seleccionada para filtrar el panel profesional
 String? professionalSpecialty;
 
 void main() async {
@@ -16,7 +17,9 @@ void main() async {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
-  } catch (e) {}
+  } catch (e) {
+    debugPrint("Firebase ya estaba listo.");
+  }
   runApp(const TodoListoApp());
 }
 
@@ -121,7 +124,7 @@ class AppDrawer extends StatelessWidget {
   }
 }
 
-// --- BIENVENIDA ---
+// --- PANTALLA BIENVENIDA ---
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
   @override
@@ -134,7 +137,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: '494243542565-cdd79d13074bdaa73271cc.apps.googleusercontent.com',
+      );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         if (mounted) setState(() => _isLoading = false);
@@ -179,8 +184,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               child: Column(
                 children: [
                   _buildWelcomeButton('INGRESAR COMO CLIENTE', oliveGreen, goldColor, () {
-                    if (FirebaseAuth.instance.currentUser == null) _signInWithGoogle();
-                    else Navigator.push(context, MaterialPageRoute(builder: (context) => const ClientHomeScreen()));
+                    if (FirebaseAuth.instance.currentUser == null) {
+                      _signInWithGoogle();
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ClientHomeScreen()));
+                    }
                   }),
                   const SizedBox(height: 20),
                   _buildWelcomeButton('MODO PROFESIONAL', Colors.white, oliveGreen, () {
@@ -242,33 +250,100 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   final TextEditingController _model = TextEditingController();
   final TextEditingController _dist = TextEditingController();
   bool _saving = false;
+  LatLng? _currentP;
+
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
+  }
+
+  Future<void> _getLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      if (mounted) setState(() => _currentP = LatLng(position.latitude, position.longitude));
+    } catch (e) {
+      debugPrint("GPS error: $e");
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    if (image != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Foto adjuntada'), backgroundColor: Colors.green));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: Text('Ayuda en: ${widget.categoryName}')),
-      body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(children: [
-        TextField(controller: _dist, decoration: const InputDecoration(labelText: '¿Dónde estás?', prefixIcon: Icon(Icons.location_on))),
+      body: SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Tu Ubicación', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        Container(
+          height: 150, width: double.infinity,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey.shade300)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: _currentP == null 
+              ? const Center(child: CircularProgressIndicator()) 
+              : GoogleMap(
+                  initialCameraPosition: CameraPosition(target: _currentP!, zoom: 15),
+                  markers: {Marker(markerId: const MarkerId('curr'), position: _currentP!)},
+                  myLocationEnabled: true,
+                ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        TextField(controller: _dist, decoration: const InputDecoration(labelText: 'Distrito / Referencia', prefixIcon: Icon(Icons.location_on))),
         const SizedBox(height: 15),
-        TextField(controller: _model, decoration: const InputDecoration(labelText: 'Modelo / Referencia (Contexto)')),
+        TextField(controller: _model, decoration: const InputDecoration(labelText: 'Modelo / Equipo', hintText: 'Ej: Terios 2005 / Refri LG')),
         const SizedBox(height: 15),
-        TextField(controller: _desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Describe el problema')),
+        TextField(controller: _desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Describe el problema', hintText: 'Iba manejando y...')),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            IconButton(onPressed: _takePhoto, icon: const Icon(Icons.camera_alt, color: Color(0xFF27B150))),
+            const Text('Foto'),
+            const SizedBox(width: 20),
+            IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎤 Grabando contexto...'))), icon: const Icon(Icons.mic, color: Colors.red)),
+            const Text('Audio'),
+          ],
+        ),
         const SizedBox(height: 30),
         SizedBox(width: double.infinity, height: 60, child: ElevatedButton(onPressed: _saving ? null : () async {
-          if (_desc.text.length < 5) return;
+          if (_desc.text.length < 5 || _dist.text.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completa ubicación y descripción'), backgroundColor: Colors.orange));
+            return;
+          }
           setState(() => _saving = true);
-          await FirebaseFirestore.instance.collection('pedidos').add({
-            'category': widget.categoryName, 'district': _dist.text, 'model': _model.text, 'description': _desc.text, 'status': 'Pendiente',
-            'userId': FirebaseAuth.instance.currentUser?.uid, 'userName': FirebaseAuth.instance.currentUser?.displayName, 'timestamp': FieldValue.serverTimestamp(),
-          });
-          if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MyRequestsScreen()));
-        }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27B150), foregroundColor: Colors.white), child: _saving ? const CircularProgressIndicator() : const Text('ENVIAR MI PROBLEMA')))
+          try {
+            await FirebaseFirestore.instance.collection('pedidos').add({
+              'category': widget.categoryName, 'district': _dist.text, 'model': _model.text, 'description': _desc.text, 'status': 'Pendiente',
+              'userId': FirebaseAuth.instance.currentUser?.uid, 'userName': FirebaseAuth.instance.currentUser?.displayName, 'timestamp': FieldValue.serverTimestamp(),
+              'lat': _currentP?.latitude, 'lng': _currentP?.longitude,
+            });
+            if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MyRequestsScreen()));
+          } catch (e) {
+            if (mounted) setState(() => _saving = false);
+          }
+        }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27B150), foregroundColor: Colors.white), child: _saving ? const CircularProgressIndicator(color: Colors.white) : const Text('SOLICITAR DIAGNÓSTICO')))
       ])),
     );
   }
 }
 
-// --- MIS PEDIDOS ---
+// --- MIS PEDIDOS (CLIENTE) ---
 class MyRequestsScreen extends StatelessWidget {
   const MyRequestsScreen({super.key});
   @override
@@ -281,10 +356,12 @@ class MyRequestsScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final docs = snapshot.data!.docs;
+          if (docs.isEmpty) return const Center(child: Text('No tienes pedidos activos.'));
           return ListView.builder(padding: const EdgeInsets.all(15), itemCount: docs.length, itemBuilder: (context, index) {
             final req = docs[index].data() as Map<String, dynamic>;
             final reqId = docs[index].id;
             final status = req['status'];
+
             return Card(
               color: status == 'En Proceso' ? Colors.blue.shade50 : (status == 'Completado' || status == 'Calificado' ? Colors.green.shade50 : null),
               child: ExpansionTile(
@@ -296,7 +373,7 @@ class MyRequestsScreen extends StatelessWidget {
                     builder: (context, oSnap) {
                       if (!oSnap.hasData) return const Text('Buscando técnicos...');
                       final offers = oSnap.data!.docs;
-                      if (offers.isEmpty) return const Padding(padding: EdgeInsets.all(15), child: Text('Esperando expertos...'));
+                      if (offers.isEmpty) return const Padding(padding: EdgeInsets.all(15), child: Text('Esperando respuestas...'));
                       return Column(children: offers.map((o) {
                         final off = o.data() as Map<String, dynamic>;
                         return ListTile(
@@ -305,7 +382,7 @@ class MyRequestsScreen extends StatelessWidget {
                             const Spacer(),
                             Text("S/ ${off['precio']}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                           ]),
-                          subtitle: Text("Llega en: ${off['tiempo']}"),
+                          subtitle: Text("Trabajos: ${off['trabajosTecnico'] ?? 0} \nLlega en: ${off['tiempo']}\n${off['mensaje']}"),
                           trailing: ElevatedButton(
                             onPressed: () async {
                               await FirebaseFirestore.instance.collection('pedidos').doc(reqId).update({'status': 'En Proceso', 'tecnicoId': off['tecnicoId'], 'nombreTecnico': off['nombreTecnico']});
@@ -320,7 +397,7 @@ class MyRequestsScreen extends StatelessWidget {
                     trailing: ElevatedButton(
                       onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(pedidoId: reqId, partnerName: req['nombreTecnico'], tecnicoId: req['tecnicoId'], isClient: true, currentStatus: status))), 
                       child: const Text('CHAT'),
-                    )
+                    ),
                   )
                 ],
               ),
@@ -338,26 +415,28 @@ class ProfDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Especialista: $professionalSpecialty')),
+      appBar: AppBar(title: Text('TodoListo: $professionalSpecialty')),
       drawer: const AppDrawer(currentMode: 'Profesional'),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('pedidos').where('category', isEqualTo: professionalSpecialty).where('status', isNotEqualTo: 'Calificado').orderBy('status').orderBy('timestamp', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final docs = snapshot.data!.docs;
+          if (docs.isEmpty) return Center(child: Text('No hay pedidos de $professionalSpecialty.'));
           return ListView.builder(padding: const EdgeInsets.all(15), itemCount: docs.length, itemBuilder: (context, index) {
             final req = docs[index].data() as Map<String, dynamic>;
             final reqId = docs[index].id;
-            final isTaken = req['status'] == 'En Proceso';
+            final isTaken = req['status'] == 'En Proceso' || req['status'] == 'Completado';
             if (isTaken && req['tecnicoId'] != FirebaseAuth.instance.currentUser?.uid) return const SizedBox.shrink();
+            
             return Card(color: isTaken ? Colors.green.shade50 : null, child: ExpansionTile(
               title: Text(req['district'] ?? ''),
-              subtitle: Text("Problema: ${req['model']}"),
+              subtitle: Text("Modelo: ${req['model']} - ${req['status']}"),
               children: [
                 Padding(padding: const EdgeInsets.all(15), child: Column(children: [
                   Text(req['description'] ?? ''),
                   const SizedBox(height: 15),
-                  if (!isTaken && req['status'] != 'Completado') ElevatedButton(onPressed: () => _sendOffer(context, reqId), child: const Text('ENVIAR SOLUCIÓN'))
+                  if (!isTaken) ElevatedButton(onPressed: () => _sendOffer(context, reqId), child: const Text('ENVIAR SOLUCIÓN'))
                   else ElevatedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(pedidoId: reqId, partnerName: req['userName'] ?? 'Cliente', tecnicoId: FirebaseAuth.instance.currentUser!.uid, isClient: false, currentStatus: req['status']))), child: const Text('IR AL CHAT'))
                 ])),
               ],
@@ -376,7 +455,7 @@ class ProfDashboardScreen extends StatelessWidget {
     showDialog(context: context, builder: (context) => AlertDialog(title: const Text('Tu Oferta'), content: Column(mainAxisSize: MainAxisSize.min, children: [
       TextField(controller: pC, decoration: const InputDecoration(labelText: 'Precio (S/)'), keyboardType: TextInputType.number),
       TextField(controller: tC, decoration: const InputDecoration(labelText: 'Tiempo de llegada')),
-      TextField(controller: mC, decoration: const InputDecoration(labelText: 'Mensaje')),
+      TextField(controller: mC, decoration: const InputDecoration(labelText: 'Mensaje al cliente')),
     ]), actions: [ElevatedButton(onPressed: () async {
       await FirebaseFirestore.instance.collection('ofertas').add({
         'pedidoId': id, 'precio': pC.text, 'tiempo': tC.text, 'mensaje': mC.text,
@@ -391,7 +470,7 @@ class ProfDashboardScreen extends StatelessWidget {
   }
 }
 
-// --- CHAT CON RATING ---
+// --- CHAT + RATING + COMPLETION ---
 class ChatScreen extends StatelessWidget {
   final String pedidoId; final String partnerName; final String? tecnicoId; final bool isClient; final String currentStatus;
   const ChatScreen({super.key, required this.pedidoId, required this.partnerName, this.tecnicoId, required this.isClient, required this.currentStatus});
@@ -401,9 +480,9 @@ class ChatScreen extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('¡Problema Solucionado!'),
+        title: const Text('¡TodoListo!'),
         content: const Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('¿Cómo calificarías la ayuda recibida?'),
+          Text('¿Cómo calificarías la ayuda?'),
           SizedBox(height: 20),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber)]),
         ]),
@@ -426,7 +505,7 @@ class ChatScreen extends StatelessWidget {
           }
           await FirebaseFirestore.instance.collection('pedidos').doc(pedidoId).update({'status': 'Calificado'});
           Navigator.pop(context); Navigator.pop(context);
-        }, child: const Text('CALIFICAR EXPERTO'))],
+        }, child: const Text('CALIFICAR'))],
       ),
     );
   }
@@ -442,7 +521,7 @@ class ChatScreen extends StatelessWidget {
         if (isClient && currentStatus == 'Completado') ElevatedButton(onPressed: () => _showRatingDialog(context), child: const Text('CALIFICAR'))
       ]),
       body: Column(children: [
-        if (currentStatus == 'Completado' && isClient) Container(width: double.infinity, color: Colors.orange.shade100, padding: const EdgeInsets.all(10), child: const Text('¡El servicio ha terminado! Califica al experto arriba.', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+        if (currentStatus == 'Completado' && isClient) Container(width: double.infinity, color: Colors.orange.shade100, padding: const EdgeInsets.all(10), child: const Text('Servicio terminado. ¡Califica al experto!', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
         Expanded(child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection('pedidos').doc(pedidoId).collection('mensajes').orderBy('timestamp', descending: true).snapshots(),
           builder: (context, snapshot) {
