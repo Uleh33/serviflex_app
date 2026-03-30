@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
 
 // Especialidad seleccionada para filtrar el panel profesional
@@ -138,7 +139,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     setState(() => _isLoading = true);
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: '494243542565-cdd79d13074bdaa73271cc.apps.googleusercontent.com',
+        clientId: kIsWeb ? '494243542565-fhr9mk78aadmf8omsjnjeuorqanmrscn.apps.googleusercontent.com' : null,
       );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {

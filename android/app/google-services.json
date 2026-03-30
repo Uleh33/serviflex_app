@@ -37,6 +37,13 @@
             {
               "client_id": "494243542565-fhr9mk78aadmf8omsjnjeuorqanmrscn.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "494243542565-36po4mjp83skl1ipu2h6rrvl32imdlt8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.serviflex.serviflexApp"
+              }
             }
           ]
         }

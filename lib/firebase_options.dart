@@ -3,6 +3,16 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+/// Default [FirebaseOptions] for use with your Firebase apps.
+///
+/// Example:
+/// ```dart
+/// import 'firebase_options.dart';
+/// // ...
+/// await Firebase.initializeApp(
+///   options: DefaultFirebaseOptions.currentPlatform,
+/// );
+/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -26,11 +36,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCl5Q2YH_nkjGqBZMLABbiy2eBMhfQ0qZY',
-    appId: '1:494243542565:web:cdd79d13074bdaa73271cc',
+    appId: '1:494243542565:web:d7499cc7d145d2f43271cc',
     messagingSenderId: '494243542565',
     projectId: 'device-streaming-4067edcc',
     authDomain: 'device-streaming-4067edcc.firebaseapp.com',
-    storageBucket: 'device-streaming-4067edcc.appspot.com',
+    storageBucket: 'device-streaming-4067edcc.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -38,7 +48,7 @@ class DefaultFirebaseOptions {
     appId: '1:494243542565:android:cdd79d13074bdaa73271cc',
     messagingSenderId: '494243542565',
     projectId: 'device-streaming-4067edcc',
-    storageBucket: 'device-streaming-4067edcc.appspot.com',
+    storageBucket: 'device-streaming-4067edcc.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -46,7 +56,7 @@ class DefaultFirebaseOptions {
     appId: '1:494243542565:ios:cdd79d13074bdaa73271cc',
     messagingSenderId: '494243542565',
     projectId: 'device-streaming-4067edcc',
-    storageBucket: 'device-streaming-4067edcc.appspot.com',
+    storageBucket: 'device-streaming-4067edcc.firebasestorage.app',
     iosBundleId: 'com.todolisto.app',
   );
 
@@ -55,16 +65,16 @@ class DefaultFirebaseOptions {
     appId: '1:494243542565:ios:cdd79d13074bdaa73271cc',
     messagingSenderId: '494243542565',
     projectId: 'device-streaming-4067edcc',
-    storageBucket: 'device-streaming-4067edcc.appspot.com',
+    storageBucket: 'device-streaming-4067edcc.firebasestorage.app',
     iosBundleId: 'com.todolisto.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyCl5Q2YH_nkjGqBZMLABbiy2eBMhfQ0qZY',
-    appId: '1:494243542565:web:cdd79d13074bdaa73271cc',
+    appId: '1:494243542565:web:d7499cc7d145d2f43271cc',
     messagingSenderId: '494243542565',
     projectId: 'device-streaming-4067edcc',
     authDomain: 'device-streaming-4067edcc.firebaseapp.com',
-    storageBucket: 'device-streaming-4067edcc.appspot.com',
+    storageBucket: 'device-streaming-4067edcc.firebasestorage.app',
   );
 }
