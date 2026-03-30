@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "494243542565",
+    "project_id": "device-streaming-4067edcc",
+    "storage_bucket": "device-streaming-4067edcc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:494243542565:android:cdd79d13074bdaa73271cc",
+        "android_client_info": {
+          "package_name": "com.todolisto.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "494243542565-q5bctcfh5pjmpn1i0ifhrbco4l2kj9vh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.todolisto.app",
+            "certificate_hash": "dec19549eedfb06552cea07c2bb587400ecafc4f"
+          }
+        },
+        {
+          "client_id": "494243542565-fhr9mk78aadmf8omsjnjeuorqanmrscn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCK4qhHggg_ZhSCKzOA9ltnIp0gVGo0gLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "494243542565-fhr9mk78aadmf8omsjnjeuorqanmrscn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
