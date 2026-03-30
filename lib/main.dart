@@ -107,6 +107,7 @@ class AppDrawer extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: categories.map((cat) => ListTile(
+            leading: const Icon(Icons.star_outline, color: Color(0xFF3D5300)),
             title: Text(cat),
             onTap: () {
               professionalSpecialty = cat;
@@ -156,6 +157,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color oliveGreen = Color(0xFF3D5300);
+    const Color goldColor = Color(0xFFFFD700);
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -170,16 +173,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             const SizedBox(height: 10),
             const Text('TODO LISTO', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 4)),
             const Spacer(),
-            Padding(
+            if (_isLoading) const CircularProgressIndicator(color: Colors.white)
+            else Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Column(
                 children: [
-                  _buildWelcomeButton('INGRESAR COMO CLIENTE', const Color(0xFF3D5300), Colors.white, () {
+                  _buildWelcomeButton('INGRESAR COMO CLIENTE', oliveGreen, goldColor, () {
                     if (FirebaseAuth.instance.currentUser == null) _signInWithGoogle();
                     else Navigator.push(context, MaterialPageRoute(builder: (context) => const ClientHomeScreen()));
                   }),
                   const SizedBox(height: 20),
-                  _buildWelcomeButton('MODO PROFESIONAL', Colors.white, const Color(0xFF3D5300), () {
+                  _buildWelcomeButton('MODO PROFESIONAL', Colors.white, oliveGreen, () {
                     _showSpecialtyDialog(context);
                   }),
                 ],
@@ -225,7 +229,7 @@ class ClientHomeScreen extends StatelessWidget {
   }
 }
 
-// --- PANTALLA SOLICITUD ---
+// --- SOLICITUD ---
 class ServiceRequestScreen extends StatefulWidget {
   final String categoryName;
   const ServiceRequestScreen({super.key, required this.categoryName});
@@ -295,23 +299,29 @@ class MyRequestsScreen extends StatelessWidget {
                       if (offers.isEmpty) return const Padding(padding: EdgeInsets.all(15), child: Text('Esperando expertos...'));
                       return Column(children: offers.map((o) {
                         final off = o.data() as Map<String, dynamic>;
-                        // PRIORIDAD VISUAL: Estrellas y Confianza arriba
                         return ListTile(
                           title: Row(children: [
                             Text("⭐ ${off['ratingTecnico'] ?? 'Nuevo'}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                            Text(" (${off['trabajosTecnico'] ?? 0} trabajos)", style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             const Spacer(),
                             Text("S/ ${off['precio']}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                           ]),
-                          subtitle: Text("Mensaje: ${off['mensaje']}\nLlega en: ${off['tiempo']}"),
-                          isThreeLine: true,
-                          trailing: ElevatedButton(onPressed: () async {
-                            await FirebaseFirestore.instance.collection('pedidos').doc(reqId).update({'status': 'En Proceso', 'tecnicoId': off['tecnicoId'], 'nombreTecnico': off['nombreTecnico']});
-                          }, child: const Text('ELEGIR')),
+                          subtitle: Text("Llega en: ${off['tiempo']}"),
+                          trailing: ElevatedButton(
+                            onPressed: () async {
+                              await FirebaseFirestore.instance.collection('pedidos').doc(reqId).update({'status': 'En Proceso', 'tecnicoId': off['tecnicoId'], 'nombreTecnico': off['nombreTecnico']});
+                            }, 
+                            child: const Text('ELEGIR')
+                          ),
                         );
                       }).toList());
                     },
-                  ) else ListTile(title: Text('Experto: ${req['nombreTecnico']}'), trailing: ElevatedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(pedidoId: reqId, partnerName: req['nombreTecnico'], tecnicoId: req['tecnicoId'], isClient: true, currentStatus: status)))), child: const Text('CHAT'))
+                  ) else ListTile(
+                    title: Text('Experto: ${req['nombreTecnico']}'), 
+                    trailing: ElevatedButton(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(pedidoId: reqId, partnerName: req['nombreTecnico'], tecnicoId: req['tecnicoId'], isClient: true, currentStatus: status))), 
+                      child: const Text('CHAT'),
+                    )
+                  )
                 ],
               ),
             );
@@ -381,7 +391,7 @@ class ProfDashboardScreen extends StatelessWidget {
   }
 }
 
-// --- CHAT CON RATING INTELIGENTE ---
+// --- CHAT CON RATING ---
 class ChatScreen extends StatelessWidget {
   final String pedidoId; final String partnerName; final String? tecnicoId; final bool isClient; final String currentStatus;
   const ChatScreen({super.key, required this.pedidoId, required this.partnerName, this.tecnicoId, required this.isClient, required this.currentStatus});
@@ -398,12 +408,11 @@ class ChatScreen extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber), Icon(Icons.star, color: Colors.amber)]),
         ]),
         actions: [ElevatedButton(onPressed: () async {
-          // LÓGICA DE PROMEDIO REAL
           if (tecnicoId != null) {
             final profRef = FirebaseFirestore.instance.collection('perfiles').doc(tecnicoId);
             await FirebaseFirestore.instance.runTransaction((tx) async {
               final snap = await tx.get(profRef);
-              double newRating = 5.0; // En un sistema real, esto viene del UI de estrellas
+              double newRating = 5.0;
               if (!snap.exists) {
                 tx.set(profRef, {'rating': newRating, 'trabajos': 1, 'sumaRating': newRating});
               } else {
@@ -433,7 +442,7 @@ class ChatScreen extends StatelessWidget {
         if (isClient && currentStatus == 'Completado') ElevatedButton(onPressed: () => _showRatingDialog(context), child: const Text('CALIFICAR'))
       ]),
       body: Column(children: [
-        if (currentStatus == 'Completado' && isClient) Container(width: double.infinity, color: Colors.orange.shade100, padding: const EdgeInsets.all(10), child: const Text('¡El servicio ha terminado! Por favor califica al experto arriba.', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+        if (currentStatus == 'Completado' && isClient) Container(width: double.infinity, color: Colors.orange.shade100, padding: const EdgeInsets.all(10), child: const Text('¡El servicio ha terminado! Califica al experto arriba.', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
         Expanded(child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection('pedidos').doc(pedidoId).collection('mensajes').orderBy('timestamp', descending: true).snapshots(),
           builder: (context, snapshot) {
