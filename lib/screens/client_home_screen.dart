@@ -7,12 +7,20 @@ class ClientHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color oliveGreen = Color(0xFF3D5300);
+    
+    // Lista de categorías actualizada según pedido del usuario
     final List<Map<String, dynamic>> categories = [
+      {'name': 'Comida', 'icon': Icons.restaurant, 'color': Colors.orange},
+      {'name': 'Perfumes', 'icon': Icons.opacity, 'color': Colors.pink},
+      {'name': 'Masajes', 'icon': Icons.spa, 'color': Colors.teal},
+      {'name': 'Psicología', 'icon': Icons.psychology, 'color': Colors.indigo},
+      {'name': 'Suplementos', 'icon': Icons.fitness_center, 'color': Colors.green},
       {'name': 'Mecánica', 'icon': Icons.car_repair, 'color': Colors.red},
       {'name': 'Plomería', 'icon': Icons.plumbing, 'color': Colors.blue},
       {'name': 'Electricidad', 'icon': Icons.bolt, 'color': Colors.amber},
       {'name': 'Limpieza', 'icon': Icons.cleaning_services, 'color': Colors.cyan},
     ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Todo Listo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), 
@@ -52,7 +60,7 @@ class ClientHomeScreen extends StatelessWidget {
                       children: [
                         Icon(cat['icon'], size: 40, color: cat['color']), 
                         const SizedBox(height: 8), 
-                        Text(cat['name'], style: const TextStyle(fontWeight: FontWeight.bold))
+                        Text(cat['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))
                       ]
                     )
                   )

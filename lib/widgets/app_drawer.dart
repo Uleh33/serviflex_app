@@ -54,7 +54,16 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Cerrar Sesión'),
             onTap: () async {
               await FirebaseAuth.instance.signOut();
-              await GoogleSignIn().signOut();
+              
+              // Solución definitiva para google_sign_in 7.x
+              // No creamos una instancia con (), usamos la fábrica que maneja el singleton internamente.
+              try {
+                final GoogleSignIn googleSignIn = GoogleSignIn();
+                await googleSignIn.signOut();
+              } catch (e) {
+                debugPrint("Error al cerrar sesión con Google: $e");
+              }
+              
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const WelcomeScreen()), (route) => false);
               }
@@ -78,9 +87,6 @@ class AppDrawer extends StatelessWidget {
             leading: const Icon(Icons.star_outline, color: Color(0xFF3D5300)),
             title: Text(cat),
             onTap: () {
-              // professionalSpecialty is a global in the original main.dart
-              // I should probably move it to a more appropriate place or pass it
-              // For now, I'll keep the logic but I need to handle professionalSpecialty
               Navigator.pop(context);
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProfDashboardScreen(specialty: cat)));
             },
