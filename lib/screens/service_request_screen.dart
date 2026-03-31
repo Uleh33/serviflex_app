@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -20,12 +21,23 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   bool _saving = false;
   LatLng? _currentP;
   bool _photoAttached = false;
+  
+  // Audio Recording Simulation States
+  bool _isRecording = false;
   bool _audioRecorded = false;
+  int _recordSeconds = 0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _getLocation();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _getLocation() async {
@@ -51,6 +63,41 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
       setState(() => _photoAttached = true);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Foto adjuntada con éxito'), backgroundColor: Colors.green));
     }
+  }
+
+  void _startRecording() {
+    setState(() {
+      _isRecording = true;
+      _audioRecorded = false;
+      _recordSeconds = 0;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _recordSeconds++;
+      });
+    });
+  }
+
+  void _stopRecording() {
+    _timer?.cancel();
+    setState(() {
+      _isRecording = false;
+      _audioRecorded = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Audio registrado'), backgroundColor: Colors.green));
+  }
+
+  void _deleteAudio() {
+    setState(() {
+      _audioRecorded = false;
+      _recordSeconds = 0;
+    });
+  }
+
+  String _formatDuration(int seconds) {
+    int minutes = seconds ~/ 60;
+    int remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -108,16 +155,47 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
               isDone: _photoAttached,
               onTap: _takePhoto
             ),
-            _buildAttachButton(
-              icon: Icons.mic, 
-              label: 'Audio', 
-              color: Colors.red, 
-              isDone: _audioRecorded,
-              onTap: () {
-                setState(() => _audioRecorded = true);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🎤 Audio registrado'), backgroundColor: Colors.redAccent));
-              }
-            ),
+            if (!_isRecording && !_audioRecorded)
+              _buildAttachButton(
+                icon: Icons.mic, 
+                label: 'Audio', 
+                color: Colors.red, 
+                isDone: false,
+                onTap: _startRecording
+              )
+            else if (_isRecording)
+              Column(
+                children: [
+                  GestureDetector(
+                    onTap: _stopRecording,
+                    child: CircleAvatar(
+                      radius: 25,
+                      backgroundColor: Colors.red.withValues(alpha: 0.1),
+                      child: const Icon(Icons.stop, color: Colors.red),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(_formatDuration(_recordSeconds), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                ],
+              )
+            else if (_audioRecorded)
+              Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Colors.green.withValues(alpha: 0.1),
+                        child: const Icon(Icons.play_arrow, color: Colors.green),
+                      ),
+                      IconButton(onPressed: _deleteAudio, icon: const Icon(Icons.delete, color: Colors.grey, size: 20)),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Text('Audio: ${_formatDuration(_recordSeconds)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                ],
+              ),
           ],
         ),
         const SizedBox(height: 30),
@@ -133,13 +211,14 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
               'userId': FirebaseAuth.instance.currentUser?.uid, 'userName': FirebaseAuth.instance.currentUser?.displayName ?? 'Cliente Anónimo', 'timestamp': FieldValue.serverTimestamp(),
               'lat': _currentP?.latitude, 'lng': _currentP?.longitude,
               'hasPhoto': _photoAttached, 'hasAudio': _audioRecorded,
+              'audioDuration': _recordSeconds,
             });
-            if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MyRequestsScreen()));
+            if (!mounted) return;
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MyRequestsScreen()));
           } catch (e) {
-            if (mounted) {
-              setState(() => _saving = false);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
-            }
+            if (!mounted) return;
+            setState(() => _saving = false);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
           }
         }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27B150), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: _saving ? const CircularProgressIndicator(color: Colors.white) : const Text('ENVIAR SOLICITUD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))))
       ])),
@@ -153,7 +232,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
         children: [
           CircleAvatar(
             radius: 25,
-            backgroundColor: isDone ? Colors.grey.shade200 : color.withOpacity(0.1),
+            backgroundColor: isDone ? Colors.grey.shade200 : color.withValues(alpha: 0.1),
             child: Icon(isDone ? Icons.check_circle : icon, color: isDone ? Colors.green : color),
           ),
           const SizedBox(height: 5),

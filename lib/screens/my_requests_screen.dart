@@ -86,7 +86,7 @@ class MyRequestsScreen extends StatelessWidget {
                   child: const Text('ELEGIR')
                 ),
               );
-            }).toList(),
+            }),
           ],
         );
       },

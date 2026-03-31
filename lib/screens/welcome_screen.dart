@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:serviflex_app/mocks/html_mock.dart' if (dart.library.html) 'dart:html' as html;
+// Usamos importación relativa para evitar errores de nombre de paquete
+import '../mocks/html_mock.dart' if (dart.library.html) 'dart:html' as html;
 import 'client_home_screen.dart';
 import 'prof_dashboard_screen.dart';
 
@@ -31,8 +32,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   void _downloadAPK() {
     if (kIsWeb) {
-      // Abre el archivo APK para descarga. 
-      // Recuerda colocar el archivo app-release.apk en la carpeta 'web/' del proyecto.
       html.window.open('app-release.apk', '_blank');
     }
   }
